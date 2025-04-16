@@ -1,0 +1,26 @@
+{%extends 'layout/base.html'%}
+
+{%block content%}
+{%if pages>1%}
+<ul class="pagination mt-3">
+    {%for i in range(1,pages+1)%}
+    <li class="page-item"><a class="page-link" href="/?page={{i}}">{{i}}</a></li>
+    {%endfor%}
+</ul>
+{%endif%}
+<div class="row">
+    <p><strong>Lớp:</strong> {{ clazz.name }} &nbsp;&nbsp;&nbsp;&nbsp; <strong>Sĩ số:</strong> {{ students|length }}</p>
+    {%for p in students%}
+    <div class="col-md-3 col-12" style="padding: 0.7rem">
+        <div class="card">
+            <img class="card-img-top" src="{{p.avatar}}" alt="{{p.name}}">
+            <div class="card-body">
+                <a href="/student/{{p.id}}">
+                    <h4 class="card-title">{{p.name}}</h4>
+                </a>
+            </div>
+        </div>
+    </div>
+    {%endfor%}
+</div>
+{%endblock%}

@@ -1,0 +1,17 @@
+{%extends 'layout/base.html'%}
+
+{%block content%}
+<div class="row">
+    {%for p in classes%}
+    <div class="col-md-3 col-12" style="padding: 0.7rem">
+        <div class="card">
+            <div class="card-body">
+                <a href="/grade/{{grade_id}}/class/{{p.id}}">
+                    <h4 class="card-title">{{p.name}}</h4>
+                </a>
+            </div>
+        </div>
+    </div>
+    {%endfor%}
+</div>
+{%endblock%}

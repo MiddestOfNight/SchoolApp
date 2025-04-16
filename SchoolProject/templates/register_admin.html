@@ -1,0 +1,74 @@
+{% extends 'layout/base.html' %}
+
+{% block title %}Đăng ký giáo viên{% endblock %}
+
+{% block content %}
+<h2 class="text-center text-primary">THÊM GIÁO VIÊN / QUẢN TRỊ</h2>
+
+{% if err_msg %}
+<div class="alert alert-danger">{{ err_msg }}</div>
+{% endif %}
+{% if success_msg %}
+<div class="alert alert-success">{{ success_msg }}</div>
+{% endif %}
+
+<form method="post">
+    <div class="form-floating mb-3">
+        <input type="text" name="name" class="form-control" placeholder="Họ tên" required>
+        <label for="name">Họ tên</label>
+    </div>
+
+    <div class="form-floating mb-3">
+        <input type="text" name="username" class="form-control" placeholder="Tên đăng nhập" required>
+        <label for="username">Tên đăng nhập</label>
+    </div>
+
+    <div class="form-floating mb-3">
+        <input type="password" name="password" class="form-control" placeholder="Mật khẩu" required>
+        <label for="password">Mật khẩu</label>
+    </div>
+
+    <div class="form-floating mb-3">
+        <select name="role" class="form-select" id="role" required>
+            <option value="1">Admin</option>
+            <option value="2">Giáo viên</option>
+        </select>
+        <label for="role">Vai trò</label>
+    </div>
+
+    <div class="form-floating mb-3">
+        <select class="form-select" name="class_id" id="class_id" required>
+            <option value="">-- Chọn lớp --</option>
+            {% for c in classes %}
+            <option value="{{ c.id }}" {% if c.id in used_class_ids %}disabled style="opacity:0.5;" {% endif %}>
+                {{ c.name }} {% if c.id in used_class_ids %}(Đã có giáo viên){% endif %}
+            </option>
+            {% endfor %}
+        </select>
+        <label for="class_id">Lớp phụ trách</label>
+    </div>
+
+    <div class="form-floating mb-3">
+        <button type="submit" class="btn btn-success">Thêm</button>
+    </div>
+</form>
+
+<script>
+    // Ẩn hiện phần chọn lớp theo role
+    const roleSelect = document.getElementById("role");
+    const classSelectDiv = document.getElementById("class-select");
+
+    roleSelect.addEventListener("change", function () {
+        if (this.value === "2")
+            classSelectDiv.style.display = "block";
+        else
+            classSelectDiv.style.display = "none";
+    });
+
+    // Ẩn nếu mặc định là admin
+    window.onload = () => {
+        if (roleSelect.value !== "2")
+            classSelectDiv.style.display = "none";
+    }
+</script>
+{% endblock %}

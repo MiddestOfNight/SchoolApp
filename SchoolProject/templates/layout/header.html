@@ -1,0 +1,49 @@
+<nav class="navbar navbar-expand-sm bg-dark navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">E-Commerce</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#collapsibleNavbar">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="collapsibleNavbar">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link active" href="/">Trang chủ</a>
+                </li>
+                {%if current_user.is_authenticated%}
+                    <li class="nav-item">
+                        <a class="nav-link" href="/login">
+                            <img src="{{current_user.avatar}}" width="25">
+                            Chào {{current_user.name}}
+                        </a>
+                    </li>
+                 {% if current_user.is_authenticated and current_user.role.name == 'TEACHER' %}
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('teacher_class_list') }}">Xem danh sách lớp</a></li>
+                    {% endif %}
+
+                    {% if current_user.is_authenticated and current_user.role.name == 'ADMIN' %}
+                        <li class="nav-item">
+                                <a class="nav-link" href="/registerstudent">Thêm học sinh</a>
+                        </li>
+                         <li class="nav-item">
+                                <a class="nav-link" href="/registerteacher">Thêm giáo viên</a>
+                        </li>
+                    {% endif %}
+                <li class="nav-item">
+                        <a class="nav-link" href="/logout">&#128110; Đăng xuất</a>
+                    </li>
+                {%else%}
+                    <li class="nav-item">
+                        <a class="nav-link" href="/login">&#128110; Đăng nhập</a>
+                    </li>
+
+                {%endif%}
+            </ul>
+            <form class="d-flex" method="get">
+                <label>
+                    <input class="form-control me-2" type="text" name="q" placeholder="Nhập từ khóa"/>
+                </label>
+                <button class="btn btn-primary" type="submit">Tìm</button>
+            </form>
+        </div>
+    </div>
+</nav>

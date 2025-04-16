@@ -1,0 +1,38 @@
+{% extends 'layout/base.html' %}
+
+{% block title %}Danh sách lớp - Giáo viên{% endblock %}
+
+{% block content %}
+<h2 class="text-center">DANH SÁCH LỚP</h2>
+
+<p><strong>Lớp:</strong> {{ clazz.name }} &nbsp;&nbsp;&nbsp;&nbsp; <strong>Sĩ số:</strong> {{ students|length }}</p>
+
+<table class="table table-bordered text-center align-middle">
+    <thead class="table-light">
+        <tr>
+            <th>STT</th>
+            <th>Họ tên</th>
+            <th>Giới tính</th>
+            <th>Năm sinh</th>
+            <th>Địa chỉ</th>
+            <th>Thao tác</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for s in students %}
+        <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ s.name }}</td>
+            <td>{{ s.gender }}</td>
+            <td>{{ s.birthday }}</td>
+            <td>{{ s.address }}</td>
+            <td>
+                <a href="{{ url_for('add_score_for_student', student_id=s.id) }}" class="btn btn-sm btn-success">
+                    ➕ Thêm điểm
+                </a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

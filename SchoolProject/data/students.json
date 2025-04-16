@@ -1,0 +1,15 @@
+
+[
+  {% for i in range(1, 41) -%}
+  {
+    "id": {{ i }},
+    "name": "Nguyen Van {{ 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[i % 26] }}",
+    "birthday": 18,
+    "gender": "Nam",
+    "address": "123 Cach mang",
+    "phone": "098156551",
+    "email": "test{{ i }}@gmail.com",
+    "class_id": 2
+  }{% if not loop.last %},{% endif %}
+  {% endfor %}
+]

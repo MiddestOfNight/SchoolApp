@@ -1,0 +1,19 @@
+{%extends 'layout/base.html'%}
+
+{%block title%}{{stu.name}}{%endblock%}
+
+{%block content%}
+<div class="row mt-3">
+    <div class="col-md-5 col-12">
+        <img src="{{stu.avatar}}" class="img-fluid">
+    </div>
+    <div class="col-md-7 col-12">
+        <h1 class="text-info">Tên: {{stu.name}}</h1>
+        <h1 class="text-info">Tuổi: {{stu.birthday}}</h1>
+        <h1 class="text-info">Giới tính: {{stu.gender}}</h1>
+        <h1 class="text-info">Địa chỉ: {{stu.address}}</h1>
+        <h1 class="text-info">Số điện thoại: {{stu.phone}}</h1>
+        <h1 class="text-info">Email: {{stu.email}}</h1>
+    </div>
+</div>
+{%endblock%}
