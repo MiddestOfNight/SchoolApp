@@ -3,25 +3,37 @@
 {%block title%}Trang đăng nhập{%endblock%}
 
 {%block content%}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-6 offset-md-3">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="text-center mb-0">ĐĂNG NHẬP</h3>
+                </div>
+                <div class="card-body">
+                    {%if err_msg%}
+                    <div class="alert alert-danger">{{err_msg}}</div>
+                    {%endif%}
 
-<h1 class="text-info text-center">TRANG ĐĂNG NHẬP</h1>
-{%if err_msg%}
-<div class="alert alert-danger">{{err_msg}}</div>
-{%endif%}
-<form method="post">
-    <div class="form-floating mb-3 mt-3">
-        <input type="text" class="form-control" id="username" placeholder="Nhập tên người dùng" name="username" required>
-        <label for="username">Tên</label>
+                    <form method="post">
+                        {{ form.csrf_token }}
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Tên đăng nhập</label>
+                            <input type="text" class="form-control" id="username" name="username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Mật khẩu</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-sign-in-alt"></i> Đăng nhập
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
-
-    <div class="form-floating mt-3 mb-3">
-        <input type="password" class="form-control" id="password" placeholder="Nhập mật khẩu" name="password" required>
-        <label for="password">Mật khẩu</label>
-    </div>
-
-    <div class="form-floating mt-3 mb-3">
-        <button type="submit" class="btn btn-success">Đăng nhập</button>
-    </div>
-</form>
-
+</div>
 {%endblock%}

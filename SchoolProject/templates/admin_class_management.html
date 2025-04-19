@@ -1,0 +1,203 @@
+{% extends 'layout/base.html' %}
+
+{% block title %}Quản lý lớp học{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="text-center text-primary mb-4">QUẢN LÝ LỚP HỌC</h2>
+
+    <div class="dropdown mb-4">
+        <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+            Quản lý lớp
+        </button>
+        <ul class="dropdown-menu">
+            <li>
+                <a class="dropdown-item" href="{{ url_for('manage_class_teachers') }}">
+                    <i class="fas fa-chalkboard-teacher"></i> Quản lý giáo viên phụ trách
+                </a>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+                <a class="dropdown-item" href="{{ url_for('add_class') }}">
+                    <i class="fas fa-plus"></i> Thêm lớp mới
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    {% if err_msg %}
+    <div class="alert alert-danger">{{ err_msg }}</div>
+    {% endif %}
+    {% if success_msg %}
+    <div class="alert alert-success">{{ success_msg }}</div>
+    {% endif %}
+
+    {% for grade in grades %}
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h3 class="card-title mb-0">Khối {{ grade.name }}</h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for class in grade.classes %}
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h4 class="card-title mb-0">Lớp {{ class.name }}</h4>
+                        </div>
+                        <div class="card-body">
+                            <p>Sĩ số: {{ class.students|length }} học sinh</p>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Họ tên</th>
+                                            <th>Thao tác</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for student in class.students %}
+                                        <tr>
+                                            <td>{{ student.name }}</td>
+                                            <td>
+                                                <button class="btn btn-danger btn-sm" 
+                                                        onclick="confirmDelete('{{ student.id }}', '{{ student.name }}', '{{ class.name }}')"
+                                                        {% if not student %}disabled{% endif %}>
+                                                    <i class="fas fa-user-minus"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <button class="btn btn-danger" 
+                                    onclick="confirmDeleteClass('{{ class.id }}', '{{ class.name }}')"
+                                    {% if class.students %}disabled{% endif %}>
+                                <i class="fas fa-trash-alt"></i> Xóa lớp
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Modal xác nhận xóa học sinh -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Xác nhận xóa học sinh</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Bạn có chắc chắn muốn xóa học sinh <span id="studentName"></span> khỏi lớp <span id="className"></span>?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-danger" onclick="deleteStudent()">Xác nhận xóa</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal xác nhận xóa lớp -->
+<div class="modal fade" id="deleteClassModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Xác nhận xóa lớp</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Bạn có chắc chắn muốn xóa lớp <span id="deleteClassName"></span>?</p>
+                <p class="text-danger">Lưu ý: Chỉ có thể xóa lớp khi không còn học sinh.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-danger" onclick="deleteClass()">Xác nhận xóa</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let studentIdToDelete = null;
+let classIdToDelete = null;
+const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+const deleteClassModal = new bootstrap.Modal(document.getElementById('deleteClassModal'));
+
+function confirmDelete(studentId, studentName, className) {
+    studentIdToDelete = studentId;
+    document.getElementById('studentName').textContent = studentName;
+    document.getElementById('className').textContent = className;
+    deleteModal.show();
+}
+
+function deleteStudent() {
+    if (!studentIdToDelete) return;
+
+    fetch(`/admin/remove-student/${studentIdToDelete}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message || 'Có lỗi xảy ra khi xóa học sinh');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Có lỗi xảy ra khi xóa học sinh');
+    })
+    .finally(() => {
+        deleteModal.hide();
+    });
+}
+
+function confirmDeleteClass(classId, className) {
+    classIdToDelete = classId;
+    document.getElementById('deleteClassName').textContent = className;
+    deleteClassModal.show();
+}
+
+function deleteClass() {
+    if (!classIdToDelete) return;
+
+    fetch(`/admin/delete-class/${classIdToDelete}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message || 'Có lỗi xảy ra khi xóa lớp');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Có lỗi xảy ra khi xóa lớp');
+    })
+    .finally(() => {
+        deleteClassModal.hide();
+    });
+}
+</script>
+{% endblock %}

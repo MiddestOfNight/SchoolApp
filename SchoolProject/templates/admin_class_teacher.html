@@ -1,0 +1,109 @@
+{% extends 'layout/base.html' %}
+
+{% block title %}Quản lý giáo viên phụ trách{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="text-center text-primary mb-4">QUẢN LÝ GIÁO VIÊN PHỤ TRÁCH</h2>
+
+    {% if err_msg %}
+    <div class="alert alert-danger">{{ err_msg }}</div>
+    {% endif %}
+    {% if success_msg %}
+    <div class="alert alert-success">{{ success_msg }}</div>
+    {% endif %}
+
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>Lớp</th>
+                    <th>Giáo viên phụ trách</th>
+                    <th>Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for class in classes %}
+                <tr>
+                    <td>{{ class.name }}</td>
+                    <td>
+                        {% if class.teacher %}
+                            {{ class.teacher.name }}
+                        {% else %}
+                            <span class="text-muted">Chưa có giáo viên phụ trách</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if class.teacher %}
+                            <button class="btn btn-danger btn-sm" 
+                                    onclick="confirmDelete('{{ class.id }}', '{{ class.name }}', '{{ class.teacher.name }}')"
+                                    {% if not class.teacher %}disabled{% endif %}>
+                                <i class="fas fa-trash-alt"></i> Xóa
+                            </button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal xác nhận xóa -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Xác nhận xóa giáo viên</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Bạn có chắc chắn muốn xóa giáo viên <span id="teacherName"></span> khỏi lớp <span id="className"></span>?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-danger" onclick="deleteTeacher()">Xác nhận xóa</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let classIdToDelete = null;
+const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+
+function confirmDelete(classId, className, teacherName) {
+    classIdToDelete = classId;
+    document.getElementById('className').textContent = className;
+    document.getElementById('teacherName').textContent = teacherName;
+    deleteModal.show();
+}
+
+function deleteTeacher() {
+    if (!classIdToDelete) return;
+
+    fetch(`/admin/remove-teacher/${classIdToDelete}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message || 'Có lỗi xảy ra khi xóa giáo viên');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Có lỗi xảy ra khi xóa giáo viên');
+    })
+    .finally(() => {
+        deleteModal.hide();
+    });
+}
+</script>
+{% endblock %} 

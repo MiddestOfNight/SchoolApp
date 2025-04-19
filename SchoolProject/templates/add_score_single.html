@@ -1,66 +1,159 @@
 {% extends 'layout/base.html' %}
 
-{% block title %}Nhập điểm học sinh{% endblock %}
+{% block title %}Nhập Điểm Học Sinh{% endblock %}
 
 {% block content %}
-<h2 class="text-center mb-4">NHẬP ĐIỂM HỌC SINH</h2>
+<h2 class="text-center mb-4">NHẬP ĐIỂM CHO {{ student.name }}</h2>
 
-<form method="post">
+{% if error_msg %}
+<div class="alert alert-danger">{{ error_msg }}</div>
+{% endif %}
+
+{% if success_msg %}
+<div class="alert alert-success">{{ success_msg }}</div>
+{% endif %}
+
+<form method="post" id="scoreForm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="mb-3 row">
         <div class="col">
             <label>Môn học:</label>
-            <input type="text" name="subject" class="form-control" required>
+            <select name="subject" class="form-control" required id="subjectSelect">
+                {% for subject in subjects %}
+                <option value="{{ subject }}"
+                        {% if existing_scores and existing_scores[0].subject== subject %}selected{% endif %}>
+                    {{ subject }}
+                </option>
+                {% endfor %}
+            </select>
         </div>
         <div class="col">
             <label>Học kỳ:</label>
-            <select name="semester" class="form-control" required>
-                <option value="1">Học kỳ 1</option>
-                <option value="2">Học kỳ 2</option>
+            <select name="semester" class="form-control" required id="semesterSelect">
+                <option value="1" {% if existing_scores and existing_scores[0].semester== 1 %}selected{% endif %}>Học kỳ 1</option>
+                <option value="2" {% if existing_scores and existing_scores[0].semester== 2 %}selected{% endif %}>Học kỳ 2</option>
             </select>
         </div>
         <div class="col">
             <label>Năm học:</label>
-            <input type="text" name="year" class="form-control" placeholder="VD: 2024-2025" required>
+            <select name="year" class="form-control" required id="yearSelect">
+                {% set current_year = 2024 %}
+                {% for i in range(-3, 4) %}
+                    {% set year = current_year + i %}
+                    {% set school_year = year|string + "-" + (year + 1)|string %}
+                    <option value="{{ school_year }}"
+                            {% if (existing_scores and existing_scores[0].year == school_year) or (not existing_scores and school_year == "2024-2025") %}selected{% endif %}>
+                        {{ school_year }}
+                    </option>
+                {% endfor %}
+            </select>
         </div>
     </div>
 
     <table class="table table-bordered text-center mt-4">
         <thead>
-            <tr>
-                <th rowspan="2">STT</th>
-                <th rowspan="2">Họ tên</th>
-                <th colspan="5">15 phút</th>
-                <th colspan="3">1 tiết</th>
-                <th rowspan="2">Cuối kỳ</th>
-            </tr>
-            <tr>
-                {% for i in range(5) %}
-                    <th>Lần {{ i + 1 }}</th>
-                {% endfor %}
-                {% for i in range(3) %}
-                    <th>Lần {{ i + 1 }}</th>
-                {% endfor %}
-            </tr>
+        <tr>
+            <th colspan="5">15 phút</th>
+            <th colspan="3">1 tiết</th>
+            <th>Cuối kỳ</th>
+        </tr>
+        <tr>
+            {% for i in range(5) %}
+            <th>Lần {{ i + 1 }}</th>
+            {% endfor %}
+            {% for i in range(3) %}
+            <th>Lần {{ i + 1 }}</th>
+            {% endfor %}
+            <th>Điểm</th>
+        </tr>
         </thead>
         <tbody>
-            {% for student in students %}
-            <tr>
-                <td>{{ loop.index }}</td>
-                <td>{{ student.name }}</td>
-                {% for i in range(5) %}
-                    <td><input type="number" name="s{{ student.id }}_d15_{{ i }}" min="0" max="10" step="0.1" class="form-control"></td>
-                {% endfor %}
-                {% for i in range(3) %}
-                    <td><input type="number" name="s{{ student.id }}_d1t_{{ i }}" min="0" max="10" step="0.1" class="form-control"></td>
-                {% endfor %}
-                <td><input type="number" name="s{{ student.id }}_final" min="0" max="10" step="0.1" class="form-control"></td>
-            </tr>
+        <tr>
+            <!-- Điểm 15 phút -->
+            {% for i in range(1, 6) %}
+            <td>
+                <input type="number" name="d15_{{ i }}" id="d15_{{ i }}"
+                       value="{{ get_score(existing_scores, '15P', i) }}"
+                       min="0" max="10" step="0.1" class="form-control">
+            </td>
             {% endfor %}
+
+            <!-- Điểm 1 tiết -->
+            {% for i in range(1, 4) %}
+            <td>
+                <input type="number" name="d1t_{{ i }}" id="d1t_{{ i }}"
+                       value="{{ get_score(existing_scores, '1T', i) }}"
+                       min="0" max="10" step="0.1" class="form-control">
+            </td>
+            {% endfor %}
+
+            <!-- Điểm cuối kỳ -->
+            <td>
+                <input type="number" name="final" id="final"
+                       value="{{ get_score(existing_scores, 'FINAL') }}"
+                       min="0" max="10" step="0.1" class="form-control">
+            </td>
+        </tr>
         </tbody>
     </table>
 
     <div class="text-center">
-        <button type="submit" class="btn btn-primary mt-3">Lưu điểm</button>
+        <button type="submit" class="btn btn-primary">Lưu Điểm</button>
     </div>
 </form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const subjectSelect = document.getElementById('subjectSelect');
+    const semesterSelect = document.getElementById('semesterSelect');
+    const yearSelect = document.getElementById('yearSelect');
+    const studentId = {{ student.id }};
+
+    async function loadScores() {
+        const subject = subjectSelect.value;
+        const semester = semesterSelect.value;
+        const year = yearSelect.value;
+
+        try {
+            const response = await fetch(`/get-scores?student_id=${studentId}&subject=${subject}&semester=${semester}&year=${year}`);
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            const scores = await response.json();
+
+            // Reset all inputs
+            for (let i = 1; i <= 5; i++) {
+                document.getElementById(`d15_${i}`).value = '';
+            }
+            for (let i = 1; i <= 3; i++) {
+                document.getElementById(`d1t_${i}`).value = '';
+            }
+            document.getElementById('final').value = '';
+
+            // Fill in scores from response
+            scores.forEach(score => {
+                if (score.type.startsWith('15P')) {
+                    const num = score.type.slice(3);
+                    document.getElementById(`d15_${num}`).value = score.value;
+                } else if (score.type.startsWith('1T')) {
+                    const num = score.type.slice(2);
+                    document.getElementById(`d1t_${num}`).value = score.value;
+                } else if (score.type === 'FINAL') {
+                    document.getElementById('final').value = score.value;
+                }
+            });
+        } catch (error) {
+            console.error('Error loading scores:', error);
+        }
+    }
+
+    // Add change event listeners
+    subjectSelect.addEventListener('change', loadScores);
+    semesterSelect.addEventListener('change', loadScores);
+    yearSelect.addEventListener('change', loadScores);
+
+    // Load scores when page loads
+    loadScores();
+});
+</script>
 {% endblock %}

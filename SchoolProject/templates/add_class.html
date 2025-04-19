@@ -1,0 +1,100 @@
+{% extends 'layout/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Form thêm lớp -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h4 class="text-center mb-4">THÊM LỚP HỌC MỚI</h4>
+            
+            {% if err_msg %}
+            <div class="alert alert-danger">{{ err_msg }}</div>
+            {% endif %}
+            
+            {% if success_msg %}
+            <div class="alert alert-success">{{ success_msg }}</div>
+            {% endif %}
+            
+            <form method="post">
+                <div class="mb-3">
+                    <label for="grade" class="form-label">Khối:</label>
+                    <select class="form-select" id="grade" name="grade_id" required>
+                        <option value="">Chọn khối</option>
+                        {% for grade in grades %}
+                        <option value="{{ grade.id }}">{{ grade.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="text-center">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Thêm lớp
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Danh sách lớp -->
+    <div class="card">
+        <div class="card-body">
+            <h4 class="text-center mb-4">DANH SÁCH LỚP HỌC</h4>
+            
+            {% for grade in grades %}
+            <div class="mb-4">
+                <h5>Khối {{ grade.name }}</h5>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 50px">STT</th>
+                                <th>Tên lớp</th>
+                                <th>Sĩ số</th>
+                                <th style="width: 100px">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for class in grade.classes %}
+                            <tr>
+                                <td class="text-center">{{ loop.index }}</td>
+                                <td>{{ class.name }}</td>
+                                <td class="text-center">{{ class.students|length }}</td>
+                                <td class="text-center">
+                                    <button onclick="deleteClass({{ class.id }}, '{{ class.name }}')" 
+                                            class="btn btn-danger btn-sm" 
+                                            {% if class.students|length > 0 %}disabled{% endif %}
+                                            title="{% if class.students|length > 0 %}Không thể xóa lớp đang có học sinh{% endif %}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+function deleteClass(classId, className) {
+    if (confirm('Bạn có chắc chắn muốn xóa lớp ' + className + '?')) {
+        fetch('/admin/delete-class/' + classId, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert(data.message);
+            }
+        });
+    }
+}
+</script>
+
+{% endblock %} 

@@ -13,6 +13,8 @@
 {% endif %}
 
 <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    
     <div class="form-floating mb-3">
         <input type="text" name="name" class="form-control" placeholder="Họ tên" required>
         <label for="name">Họ tên</label>
@@ -36,8 +38,8 @@
         <label for="role">Vai trò</label>
     </div>
 
-    <div class="form-floating mb-3">
-        <select class="form-select" name="class_id" id="class_id" required>
+    <div class="form-floating mb-3" id="class-select">
+        <select class="form-select" name="class_id" id="class_id">
             <option value="">-- Chọn lớp --</option>
             {% for c in classes %}
             <option value="{{ c.id }}" {% if c.id in used_class_ids %}disabled style="opacity:0.5;" {% endif %}>
@@ -58,17 +60,19 @@
     const roleSelect = document.getElementById("role");
     const classSelectDiv = document.getElementById("class-select");
 
-    roleSelect.addEventListener("change", function () {
-        if (this.value === "2")
+    function updateClassSelectVisibility() {
+        if (roleSelect.value === "2") {
             classSelectDiv.style.display = "block";
-        else
+            document.getElementById("class_id").required = true;
+        } else {
             classSelectDiv.style.display = "none";
-    });
+            document.getElementById("class_id").required = false;
+        }
+    }
+
+    roleSelect.addEventListener("change", updateClassSelectVisibility);
 
     // Ẩn nếu mặc định là admin
-    window.onload = () => {
-        if (roleSelect.value !== "2")
-            classSelectDiv.style.display = "none";
-    }
+    window.onload = updateClassSelectVisibility;
 </script>
 {% endblock %}

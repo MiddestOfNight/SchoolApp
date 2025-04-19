@@ -3,36 +3,56 @@
 {% block title %}Danh sách lớp - Giáo viên{% endblock %}
 
 {% block content %}
-<h2 class="text-center">DANH SÁCH LỚP</h2>
+<div class="container mt-4">
+    <h2 class="text-center mb-4">DANH SÁCH LỚP</h2>
 
-<p><strong>Lớp:</strong> {{ clazz.name }} &nbsp;&nbsp;&nbsp;&nbsp; <strong>Sĩ số:</strong> {{ students|length }}</p>
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h5 class="mb-0">
+                        <strong>Lớp:</strong> {{ clazz.name }} 
+                        <span class="ms-4"><strong>Sĩ số:</strong> {{ students|length }}</span>
+                    </h5>
+                </div>
+                <div>
+                    <a href="{{ url_for('class_all_scores', class_id=clazz.id) }}" class="btn btn-primary">
+                        <i class="fas fa-chart-line"></i> Xem điểm trung bình lớp
+                    </a>
+                </div>
+            </div>
 
-<table class="table table-bordered text-center align-middle">
-    <thead class="table-light">
-        <tr>
-            <th>STT</th>
-            <th>Họ tên</th>
-            <th>Giới tính</th>
-            <th>Năm sinh</th>
-            <th>Địa chỉ</th>
-            <th>Thao tác</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for s in students %}
-        <tr>
-            <td>{{ loop.index }}</td>
-            <td>{{ s.name }}</td>
-            <td>{{ s.gender }}</td>
-            <td>{{ s.birthday }}</td>
-            <td>{{ s.address }}</td>
-            <td>
-                <a href="{{ url_for('add_score_for_student', student_id=s.id) }}" class="btn btn-sm btn-success">
-                    ➕ Thêm điểm
-                </a>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover align-middle">
+                    <thead class="table-light">
+                    <tr class="text-center">
+                        <th>STT</th>
+                        <th>Họ tên</th>
+                        <th>Giới tính</th>
+                        <th>Năm sinh</th>
+                        <th>Địa chỉ</th>
+                        <th>Thao tác</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for s in students %}
+                    <tr>
+                        <td class="text-center">{{ loop.index }}</td>
+                        <td>{{ s.name }}</td>
+                        <td class="text-center">{{ s.gender }}</td>
+                        <td class="text-center">{{ s.birthday }}</td>
+                        <td>{{ s.address }}</td>
+                        <td class="text-center">
+                            <a href="{{ url_for('input_score_single', student_id=s.id) }}" class="btn btn-sm btn-info">
+                                <i class="fas fa-edit"></i> Nhập Điểm
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

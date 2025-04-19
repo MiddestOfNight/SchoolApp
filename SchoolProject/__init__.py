@@ -1,6 +1,7 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
+from flask_wtf.csrf import CSRFProtect
 import cloudinary
 
 app = Flask(__name__)
@@ -13,6 +14,9 @@ app.config["PAGE_SIZE"] = 8
 
 db = SQLAlchemy(app)
 login = LoginManager(app)
+
+# Thêm bảo vệ CSRF
+csrf = CSRFProtect(app)
 
 cloudinary.config(cloud_name='dy1unykph',
     api_key='238791983534257',

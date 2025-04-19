@@ -1,0 +1,56 @@
+{% extends 'layout/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="text-center mb-4">BẢNG ĐIỂM MÔN HỌC</h2>
+    
+    <div class="card">
+        <div class="card-body">
+            <div class="mb-3">
+                <strong>Lớp:</strong> {{ class_name }}
+                <br>
+                <strong>Năm học:</strong> {{ year }}
+                <br>
+                <strong>Học kỳ:</strong> {{ semester }}
+                <div class="mb-3">
+                    <label for="subject" class="form-label">Môn học</label>
+                    <select name="subject" id="subject" class="form-select" onchange="this.form.submit()">
+                        {% for s in subjects %}
+                        <option value="{{ s.name }}" {% if s.name == subject %}selected{% endif %}>
+                            {{ s.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-center" style="width: 50px">STT</th>
+                            <th>Họ tên</th>
+                            <th class="text-center">Điểm TB HK{{ semester }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for score in averages %}
+                        <tr>
+                            <td class="text-center">{{ loop.index }}</td>
+                            <td>{{ score.student_name }}</td>
+                            <td class="text-center">{{ "%.2f"|format(score.average) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if averages %}
+            <div class="mt-3">
+                <p><strong>Điểm trung bình lớp:</strong> {{ "%.2f"|format(class_average) }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 

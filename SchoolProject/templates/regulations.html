@@ -1,0 +1,172 @@
+{% extends 'layout/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <!-- Quy định về tuổi và sĩ số -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3 class="mb-0">Quy định về tuổi và sĩ số</h3>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('manage_regulations') }}">
+                        {{ form.csrf_token }}
+                        
+                        {% if success_msg %}
+                        <div class="alert alert-success">{{ success_msg }}</div>
+                        {% endif %}
+                        
+                        {% if error_msg %}
+                        <div class="alert alert-danger">{{ error_msg }}</div>
+                        {% endif %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Tuổi tối thiểu</label>
+                            <input type="number" name="min_age" class="form-control" value="{{ regulations.min_age }}" required min="1" max="100">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Tuổi tối đa</label>
+                            <input type="number" name="max_age" class="form-control" value="{{ regulations.max_age }}" required min="1" max="100">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Sĩ số tối đa mỗi lớp</label>
+                            <input type="number" name="max_students_per_class" class="form-control" value="{{ regulations.max_students_per_class }}" required min="1" max="100">
+                        </div>
+                        
+                        <button type="submit" name="action" value="update_regulations" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Cập nhật quy định
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Quản lý môn học -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">Quản lý môn học</h3>
+                    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addSubjectModal">
+                        <i class="fas fa-plus"></i> Thêm môn học
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>STT</th>
+                                    <th>Tên môn học</th>
+                                    <th>Trạng thái</th>
+                                    <th>Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for subject in subjects %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td>{{ subject.name }}</td>
+                                    <td>
+                                        {% if subject.is_active %}
+                                        <span class="badge bg-success">Đang sử dụng</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">Đã vô hiệu</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <form method="POST" action="{{ url_for('manage_regulations') }}" style="display: inline;">
+                                            {{ form.csrf_token }}
+                                            <input type="hidden" name="subject_id" value="{{ subject.id }}">
+                                            <button type="button" class="btn btn-info btn-sm" title="Sửa"
+                                                    onclick="openEditModal('{{ subject.id }}', '{{ subject.name }}')">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            {% if subject.is_active %}
+                                            <button type="submit" name="action" value="deactivate_subject" 
+                                                    class="btn btn-warning btn-sm" title="Vô hiệu hóa">
+                                                <i class="fas fa-ban"></i>
+                                            </button>
+                                            {% else %}
+                                            <button type="submit" name="action" value="activate_subject" 
+                                                    class="btn btn-success btn-sm" title="Kích hoạt">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            {% endif %}
+                                            <button type="submit" name="action" value="delete_subject" 
+                                                    class="btn btn-danger btn-sm" title="Xóa"
+                                                    onclick="return confirm('Bạn có chắc chắn muốn xóa môn học này?');">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal thêm môn học -->
+<div class="modal fade" id="addSubjectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Thêm môn học mới</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('manage_regulations') }}">
+                {{ form.csrf_token }}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Tên môn học</label>
+                        <input type="text" name="subject_name" class="form-control" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" name="action" value="add_subject" class="btn btn-primary">Thêm</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal sửa môn học -->
+<div class="modal fade" id="editSubjectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Sửa tên môn học</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('manage_regulations') }}">
+                {{ form.csrf_token }}
+                <input type="hidden" name="subject_id" id="edit_subject_id">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Tên môn học</label>
+                        <input type="text" name="subject_name" id="edit_subject_name" class="form-control" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" name="action" value="update_subject" class="btn btn-primary">Cập nhật</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function openEditModal(subjectId, subjectName) {
+    document.getElementById('edit_subject_id').value = subjectId;
+    document.getElementById('edit_subject_name').value = subjectName;
+    new bootstrap.Modal(document.getElementById('editSubjectModal')).show();
+}
+</script>
+{% endblock %} 

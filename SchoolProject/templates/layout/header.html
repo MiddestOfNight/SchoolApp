@@ -1,6 +1,6 @@
 <nav class="navbar navbar-expand-sm bg-dark navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="/">E-Commerce</a>
+        <a class="navbar-brand" href="/">TRUNG HỌC PHỔ THÔNG BỜ BẮC</a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#collapsibleNavbar">
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -16,26 +16,49 @@
                             Chào {{current_user.name}}
                         </a>
                     </li>
-                 {% if current_user.is_authenticated and current_user.role.name == 'TEACHER' %}
+                    {% if current_user.is_teacher %}
                         <li class="nav-item"><a class="nav-link" href="{{ url_for('teacher_class_list') }}">Xem danh sách lớp</a></li>
                     {% endif %}
 
-                    {% if current_user.is_authenticated and current_user.role.name == 'ADMIN' %}
+                    {% if current_user.is_admin %}
                         <li class="nav-item">
-                                <a class="nav-link" href="/registerstudent">Thêm học sinh</a>
+                                <a class="nav-link" href="{{ url_for('registerstudent') }}">
+                                    <i class="fas fa-user-plus"></i> Thêm học sinh
+                                </a>
                         </li>
                          <li class="nav-item">
-                                <a class="nav-link" href="/registerteacher">Thêm giáo viên</a>
+                                <a class="nav-link" href="{{ url_for('register_teacher') }}">
+                                    <i class="fas fa-chalkboard-teacher"></i> Thêm giáo viên
+                                </a>
+                        </li>
+                        <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('add_class') }}">
+                                    <i class="fas fa-plus-circle"></i> Thêm lớp học
+                                </a>
+                        </li>
+                        <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('admin_subject_stats') }}">
+                                    <i class="fas fa-chart-bar"></i> Thống kê điểm môn học
+                                </a>
+                        </li>
+                        <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('admin_class_management') }}">
+                                    <i class="fas fa-users-cog"></i> Quản lý lớp học
+                                </a>
+                        </li>
+                        <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('manage_regulations') }}">
+                                    <i class="fas fa-cogs"></i> Quy định
+                                </a>
                         </li>
                     {% endif %}
-                <li class="nav-item">
-                        <a class="nav-link" href="/logout">&#128110; Đăng xuất</a>
-                    </li>
+                    <li class="nav-item">
+                            <a class="nav-link" href="/logout">&#128110; Đăng xuất</a>
+                        </li>
                 {%else%}
                     <li class="nav-item">
                         <a class="nav-link" href="/login">&#128110; Đăng nhập</a>
                     </li>
-
                 {%endif%}
             </ul>
             <form class="d-flex" method="get">
