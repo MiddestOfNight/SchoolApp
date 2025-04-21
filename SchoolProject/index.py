@@ -38,12 +38,31 @@ def calculate_age(birthday_str):
 
 @app.route('/')
 def index():
-    grades = dao.load_grade()
-    return render_template("index.html", grades=grades)
+    # Get search query
+    q = request.args.get('q', '')
+    tab = request.args.get('tab', 'grades')  # Default tab is grades
+    
+    # Load data based on active tab
+    grades = []
+    students = []
+    if tab == 'grades':
+        grades = dao.load_grade()
+    elif tab == 'search':
+        if q:
+            students = dao.load_student(q=q)
+            
+    return render_template("index.html", 
+                         grades=grades,
+                         students=students,
+                         search_query=q,
+                         active_tab=tab)
 
 @app.route('/grade/<int:grade_id>')
 def class1(grade_id):
     classes = dao.load_class(grade_id=grade_id)
+    # Add student count for each class
+    for c in classes:
+        c.total_students = dao.count_class(class_id=c.id)
     return render_template("class.html", classes=classes, grade_id=grade_id)
 
 
@@ -76,6 +95,14 @@ def inclass(grade_id, id):
 @app.route('/student/<int:id>')
 def details(id):
     stu = dao.get_student_by_id(id)
+    if stu and stu.class_id:
+        class_info = dao.get_class_by_id(stu.class_id)
+        if class_info:
+            stu.class_name = class_info.name
+        else:
+            stu.class_name = "Chưa phân lớp"
+    else:
+        stu.class_name = "Chưa phân lớp"
     return render_template('student_details.html', stu=stu)
 
 @login.user_loader
@@ -829,6 +856,81 @@ def manage_class_teachers():
         
     classes = SchoolClass.query.order_by(SchoolClass.name).all()
     return render_template('admin_class_teacher.html', classes=classes)
+
+@app.route('/admin/edit-student/<int:student_id>', methods=['GET', 'POST'])
+@login_required
+def edit_student(student_id):
+    if not current_user.is_admin:
+        return redirect('/')
+        
+    student = dao.get_student_by_id(student_id)
+    if not student:
+        flash('Không tìm thấy học sinh', 'error')
+        return redirect('/')
+        
+    err_msg = None
+    success_msg = None
+    
+    if request.method == 'POST':
+        try:
+            name = request.form.get('name')
+            avatar = request.files.get('avatar')
+            if avatar:
+                res = cloudinary.uploader.upload(avatar)
+                student.avatar = res['secure_url']
+                
+            birthday = request.form.get('birthday')
+            gender = request.form.get('gender')
+            address = request.form.get('address')
+            phone = request.form.get('phone')
+            email = request.form.get('email')
+            class_id = request.form.get('class_id')
+            
+            # Validate input
+            if not all([name, birthday, gender, address, email]):
+                raise Exception("Vui lòng điền đầy đủ thông tin bắt buộc!")
+                
+            if '@' not in email:
+                raise Exception("Email không hợp lệ!")
+                
+            # Calculate age and validate
+            age = calculate_age(birthday)
+            regulations = Regulation.query.first()
+            if age < regulations.min_age:
+                raise Exception(f"Học sinh phải đủ {regulations.min_age} tuổi")
+            if age > regulations.max_age:
+                raise Exception(f"Học sinh không được quá {regulations.max_age} tuổi")
+                
+            # Update student info
+            student.name = name
+            student.birthday = birthday
+            student.gender = gender
+            student.address = address
+            student.phone = phone
+            student.email = email
+            
+            # Update class if changed
+            if class_id and int(class_id) != student.class_id:
+                # Check class size limit
+                current_count = dao.count_class(class_id)
+                if current_count >= regulations.max_students_per_class:
+                    raise Exception(f"Lớp đã đủ {regulations.max_students_per_class} học sinh!")
+                student.class_id = class_id
+                
+            db.session.commit()
+            success_msg = "Cập nhật thông tin học sinh thành công!"
+            
+        except Exception as e:
+            err_msg = str(e)
+            db.session.rollback()
+            
+    # Get all grades and classes for the form
+    grades = dao.load_grade()
+    return render_template('edit_student.html',
+                         student=student,
+                         grades=grades,
+                         err_msg=err_msg,
+                         success_msg=success_msg)
 
 if __name__ == "__main__":
     with app.app_context():

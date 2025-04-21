@@ -1,0 +1,222 @@
+{% extends 'layout/base.html' %}
+
+{% block title %}Chỉnh sửa thông tin học sinh{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h3 class="card-title mb-4">
+                        <i class="fas fa-user-edit me-2"></i>
+                        Chỉnh sửa thông tin học sinh
+                    </h3>
+
+                    {% if err_msg %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        {{ err_msg }}
+                    </div>
+                    {% endif %}
+
+                    {% if success_msg %}
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i>
+                        {{ success_msg }}
+                    </div>
+                    {% endif %}
+
+                    <form method="post" enctype="multipart/form-data">
+                        <div class="row g-3">
+                            <!-- Avatar -->
+                            <div class="col-12 text-center mb-3">
+                                <div class="avatar-wrapper">
+                                    <img src="{{ student.avatar or url_for('static', filename='images/default-avatar.png') }}" 
+                                         class="rounded-circle avatar-preview" alt="Avatar">
+                                    <div class="avatar-edit">
+                                        <label for="avatar" class="btn btn-sm btn-light">
+                                            <i class="fas fa-camera"></i>
+                                        </label>
+                                        <input type="file" id="avatar" name="avatar" class="d-none" accept="image/*">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Họ tên -->
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label">Họ và tên <span class="text-danger">*</span></label>
+                                    <input type="text" name="name" class="form-control" value="{{ student.name }}" required>
+                                </div>
+                            </div>
+
+                            <!-- Ngày sinh -->
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label">Ngày sinh <span class="text-danger">*</span></label>
+                                    <input type="date" name="birthday" class="form-control" value="{{ student.birthday }}" required>
+                                </div>
+                            </div>
+
+                            <!-- Giới tính -->
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label">Giới tính <span class="text-danger">*</span></label>
+                                    <select name="gender" class="form-select" required>
+                                        <option value="Nam" {{ 'selected' if student.gender == 'Nam' }}>Nam</option>
+                                        <option value="Nữ" {{ 'selected' if student.gender == 'Nữ' }}>Nữ</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Địa chỉ -->
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label">Địa chỉ <span class="text-danger">*</span></label>
+                                    <input type="text" name="address" class="form-control" value="{{ student.address }}" required>
+                                </div>
+                            </div>
+
+                            <!-- Số điện thoại -->
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label">Số điện thoại</label>
+                                    <input type="tel" name="phone" class="form-control" value="{{ student.phone }}">
+                                </div>
+                            </div>
+
+                            <!-- Email -->
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label">Email <span class="text-danger">*</span></label>
+                                    <input type="email" name="email" class="form-control" value="{{ student.email }}" required>
+                                </div>
+                            </div>
+
+                            <!-- Khối -->
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label">Khối</label>
+                                    <select id="grade" class="form-select" onchange="loadClasses()">
+                                        <option value="">Chọn khối</option>
+                                        {% for grade in grades %}
+                                        <option value="{{ grade.id }}">Khối {{ grade.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Lớp -->
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label">Lớp</label>
+                                    <select name="class_id" id="class" class="form-select">
+                                        <option value="">Chọn lớp</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Buttons -->
+                            <div class="col-12 text-end">
+                                <a href="/" class="btn btn-secondary me-2">
+                                    <i class="fas fa-times me-1"></i>Hủy
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-1"></i>Lưu thay đổi
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.avatar-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.avatar-preview {
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+    border: 3px solid #fff;
+    box-shadow: 0 0 10px rgba(0,0,0,.1);
+}
+
+.avatar-edit {
+    position: absolute;
+    right: 5px;
+    bottom: 5px;
+}
+
+.avatar-edit .btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    padding: 0;
+    line-height: 32px;
+    box-shadow: 0 0 10px rgba(0,0,0,.1);
+}
+</style>
+
+<script>
+function loadClasses() {
+    const gradeId = document.getElementById('grade').value;
+    const classSelect = document.getElementById('class');
+    const currentClassId = '{{ student.class_id }}';
+    
+    // Clear current options
+    classSelect.innerHTML = '<option value="">Chọn lớp</option>';
+    
+    if (gradeId) {
+        fetch(`/get-classes?grade_id=${gradeId}`)
+            .then(response => response.json())
+            .then(classes => {
+                classes.forEach(c => {
+                    const option = document.createElement('option');
+                    option.value = c.id;
+                    option.text = c.name;
+                    if (c.id == currentClassId) {
+                        option.selected = true;
+                    }
+                    classSelect.appendChild(option);
+                });
+            });
+    }
+}
+
+// Preview avatar image before upload
+document.getElementById('avatar').onchange = function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.querySelector('.avatar-preview').src = e.target.result;
+        }
+        reader.readAsDataURL(file);
+    }
+}
+
+// Load current class on page load
+window.onload = function() {
+    const currentClassId = '{{ student.class_id }}';
+    if (currentClassId) {
+        // Find the grade that contains this class
+        fetch('/get-classes')
+            .then(response => response.json())
+            .then(classes => {
+                const currentClass = classes.find(c => c.id == currentClassId);
+                if (currentClass) {
+                    document.getElementById('grade').value = currentClass.grade_id;
+                    loadClasses();
+                }
+            });
+    }
+}
+</script>
+{% endblock %} 

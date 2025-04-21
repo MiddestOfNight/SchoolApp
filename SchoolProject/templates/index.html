@@ -1,18 +1,179 @@
 {%extends 'layout/base.html'%}
 
+{% block title %}Trang chủ - Hệ thống quản lý trường học{% endblock %}
+
 {%block content%}
-<div class="row">
-    {%for p in grades%}
-    <div class="col-md-3 col-12" style="padding: 0.7rem">
-        <div class="card">
-            <div class="card-body">
-                <a  href="/grade/{{p.id}}">
-                    <h4 class="card-title">{{p.name}}</h4>
-                </a>
+<div class="container mt-4">
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <a class="nav-link {{ 'active' if active_tab == 'grades' }}" href="/?tab=grades">
+                <i class="fas fa-graduation-cap me-2"></i>Danh sách khối
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {{ 'active' if active_tab == 'search' }}" href="/?tab=search">
+                <i class="fas fa-search me-2"></i>Tìm kiếm học sinh
+            </a>
+        </li>
+    </ul>
+
+    {% if active_tab == 'grades' %}
+    <!-- Danh sách khối -->
+    <div class="row g-4">
+        {% for g in grades %}
+        <div class="col-md-4">
+            <div class="card h-100 grade-card border-0 rounded-4">
+                <div class="card-body pattern-bg d-flex flex-column">
+                    <h3 class="card-title text-white mb-3">Khối {{ g.name }}</h3>
+                    <p class="card-text text-white mb-4">
+                        <i class="fas fa-users me-2"></i>
+                        {{ g.classes|length }} lớp học
+                    </p>
+                    <a href="/grade/{{ g.id }}" class="btn btn-light mt-auto stretched-link">
+                        <i class="fas fa-chevron-right me-2"></i>
+                        Xem chi tiết
+                    </a>
+                </div>
             </div>
         </div>
+        {% endfor %}
     </div>
-    {%endfor%}
+    {% else %}
+    <!-- Tìm kiếm học sinh -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <form method="get" class="mb-4">
+                <input type="hidden" name="tab" value="search">
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <div class="form-group">
+                            <label class="form-label">Tên học sinh:</label>
+                            <input type="text" name="q" class="form-control" value="{{ search_query }}" 
+                                   placeholder="Nhập tên học sinh cần tìm...">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">&nbsp;</label>
+                        <button type="submit" class="btn btn-primary d-block w-100">
+                            <i class="fas fa-search me-2"></i>Tìm kiếm
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            {% if search_query %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Họ và tên</th>
+                            <th>Lớp</th>
+                            <th>Ngày sinh</th>
+                            <th>Giới tính</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if students %}
+                        {% for student in students %}
+                        <tr>
+                            <td>{{ student.name }}</td>
+                            <td>{{ student.class_name }}</td>
+                            <td>{{ student.birthday }}</td>
+                            <td>{{ student.gender }}</td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="/student/{{ student.id }}" class="btn btn-sm btn-info">
+                                        <i class="fas fa-eye me-1"></i>Chi tiết
+                                    </a>
+                                    {% if current_user.is_authenticated and current_user.is_admin %}
+                                    <a href="/admin/edit-student/{{ student.id }}" class="btn btn-sm btn-warning">
+                                        <i class="fas fa-edit me-1"></i>Chỉnh sửa
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center">
+                                Không tìm thấy học sinh nào phù hợp với từ khóa "{{ search_query }}"
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
 </div>
+
+<style>
+.grade-card {
+    transition: all 0.3s ease;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.pattern-bg {
+    background: linear-gradient(45deg, #ff69b4, #ff1493);
+    position: relative;
+}
+
+.pattern-bg::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url('https://adobexdelements.com/wp-content/uploads/2020/12/adobe-xd-patterns-pack.jpg');
+    background-size: cover;
+    opacity: 0.2;
+    mix-blend-mode: soft-light;
+}
+
+.grade-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 1rem 3rem rgba(0,0,0,.25)!important;
+}
+
+.grade-card .card-body {
+    position: relative;
+    z-index: 1;
+    padding: 2rem;
+}
+
+.grade-card .card-title {
+    font-weight: 600;
+    font-size: 1.75rem;
+}
+
+.grade-card .btn-light {
+    border: none;
+    padding: 0.75rem 1.5rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.grade-card .btn-light:hover {
+    transform: translateX(5px);
+    background: white;
+}
+
+.nav-tabs .nav-link {
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.nav-tabs .nav-link.active {
+    color: #ff1493;
+    font-weight: 600;
+}
+</style>
 {%endblock%}
 

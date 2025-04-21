@@ -2,14 +2,14 @@
 
 {% block content %}
 <div class="container mt-4">
-    <div class="card">
+    <div class="card mb-4">
         <div class="card-body">
             <!-- Form chọn thông tin -->
             <form method="get" class="mb-4" id="statsForm">
                 <div class="row g-3 align-items-end">
                     <div class="col-md-3">
                         <label class="form-label">Môn:</label>
-                        <select name="subject" class="form-select" onchange="this.form.submit()">
+                        <select name="subject" class="form-select">
                             <option value="Toán" {% if subject == 'Toán' %}selected{% endif %}>Toán</option>
                             <option value="Văn" {% if subject == 'Văn' %}selected{% endif %}>Văn</option>
                             <option value="Anh" {% if subject == 'Anh' %}selected{% endif %}>Anh</option>
@@ -17,14 +17,14 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Học kỳ:</label>
-                        <select name="semester" class="form-select" onchange="this.form.submit()">
+                        <select name="semester" class="form-select">
                             <option value="1" {% if semester == 1 %}selected{% endif %}>1</option>
                             <option value="2" {% if semester == 2 %}selected{% endif %}>2</option>
                         </select>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Năm học:</label>
-                        <select name="year" class="form-select" onchange="this.form.submit()">
+                        <select name="year" class="form-select">
                             <option value="{{ prev_year_str }}" {% if year == prev_year_str %}selected{% endif %}>{{ prev_year_str }}</option>
                             <option value="{{ current_year_str }}" {% if year == current_year_str %}selected{% endif %}>{{ current_year_str }}</option>
                         </select>
@@ -34,7 +34,7 @@
 
             <!-- Báo cáo -->
             <div class="mt-4">
-                <h4 class="text-center mb-4">BÁO CÁO TỔNG KẾT MÔN HỌC</h4>
+                <h4 class="text-center mb-4">BÁO CÁO TỔNG KẾT MÔN {{ subject|upper }}</h4>
                 <div class="table-responsive">
                     <table class="table table-bordered">
                         <tr>
@@ -45,44 +45,121 @@
                             <td colspan="2"><strong>Năm học:</strong> {{ year }}</td>
                         </tr>
                     </table>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                    <table class="table table-bordered mt-3">
-                        <thead>
-                            <tr class="text-center">
-                                <th style="width: 50px">STT</th>
-                                <th>Lớp</th>
-                                <th>Sĩ số</th>
-                                <th>Số lượng đạt</th>
-                                <th>Tỷ lệ</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for stat in class_stats %}
-                            <tr class="text-center">
-                                <td>{{ loop.index }}</td>
-                                <td>{{ stat.class_name }}</td>
-                                <td>{{ stat.total_students }}</td>
-                                <td>{{ stat.passing_students }}</td>
-                                <td>{{ "%.2f"|format(stat.passing_rate) }}%</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+    <div class="row">
+        <!-- Biểu đồ -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <canvas id="statsChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bảng số liệu -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr class="text-center">
+                                    <th>Lớp</th>
+                                    <th>Sĩ số</th>
+                                    <th>Đạt</th>
+                                    <th>Tỷ lệ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for stat in class_stats %}
+                                <tr class="text-center">
+                                    <td>{{ stat.class_name }}</td>
+                                    <td>{{ stat.total_students }}</td>
+                                    <td>{{ stat.passing_students }}</td>
+                                    <td>{{ "%.1f"|format(stat.passing_rate) }}%</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Form auto-submit
     const form = document.getElementById('statsForm');
     const selects = form.querySelectorAll('select');
-    
     selects.forEach(select => {
         select.addEventListener('change', function() {
             form.submit();
         });
+    });
+
+    // Chart
+    const ctx = document.getElementById('statsChart').getContext('2d');
+    const classNames = {{ class_stats|map(attribute='class_name')|list|tojson }};
+    const totalStudents = {{ class_stats|map(attribute='total_students')|list|tojson }};
+    const passingStudents = {{ class_stats|map(attribute='passing_students')|list|tojson }};
+    
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: classNames,
+            datasets: [{
+                label: 'Tổng số học sinh',
+                data: totalStudents,
+                backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }, {
+                label: 'Số học sinh đạt',
+                data: passingStudents,
+                backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Thống kê kết quả môn {{ subject }} - Học kỳ {{ semester }} - {{ year }}',
+                    font: {
+                        size: 16
+                    }
+                },
+                legend: {
+                    position: 'bottom'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Số học sinh'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Lớp'
+                    }
+                }
+            }
+        }
     });
 });
 </script>

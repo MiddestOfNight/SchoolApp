@@ -18,6 +18,6 @@ login = LoginManager(app)
 # Thêm bảo vệ CSRF
 csrf = CSRFProtect(app)
 
-cloudinary.config(cloud_name='dy1unykph',
-    api_key='238791983534257',
-    api_secret='_J2MkfDJ1DwRe1uAn5TKozXup0U')
+cloudinary.config(cloud_name='durvuy8zh',
+    api_key='437287972251261',
+    api_secret='rZumWoYdYnMxeBxfsNkIAJkNoHs')

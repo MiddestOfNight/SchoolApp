@@ -3,17 +3,75 @@
 {%block title%}{{stu.name}}{%endblock%}
 
 {%block content%}
-<div class="row mt-3">
-    <div class="col-md-5 col-12">
-        <img src="{{stu.avatar}}" class="img-fluid">
-    </div>
-    <div class="col-md-7 col-12">
-        <h1 class="text-info">Tên: {{stu.name}}</h1>
-        <h1 class="text-info">Tuổi: {{stu.birthday}}</h1>
-        <h1 class="text-info">Giới tính: {{stu.gender}}</h1>
-        <h1 class="text-info">Địa chỉ: {{stu.address}}</h1>
-        <h1 class="text-info">Số điện thoại: {{stu.phone}}</h1>
-        <h1 class="text-info">Email: {{stu.email}}</h1>
+<div class="container mt-4">
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    {% if stu.avatar %}
+                    <img src="{{stu.avatar}}" class="img-fluid rounded-3 shadow-sm">
+                    {% else %}
+                    <div class="text-center p-4 bg-light rounded-3">
+                        <i class="fas fa-user-circle fa-6x text-secondary"></i>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="col-md-8">
+                    <h2 class="mb-4">Thông tin học sinh</h2>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <p class="mb-2">
+                                <i class="fas fa-user text-primary me-2"></i>
+                                <strong>Họ và tên:</strong>
+                            </p>
+                            <p class="text-dark ms-4">{{stu.name}}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-2">
+                                <i class="fas fa-graduation-cap text-primary me-2"></i>
+                                <strong>Lớp:</strong>
+                            </p>
+                            <p class="text-dark ms-4">{{stu.class_name}}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-2">
+                                <i class="fas fa-calendar text-primary me-2"></i>
+                                <strong>Ngày sinh:</strong>
+                            </p>
+                            <p class="text-dark ms-4">{{stu.birthday}}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-2">
+                                <i class="fas fa-venus-mars text-primary me-2"></i>
+                                <strong>Giới tính:</strong>
+                            </p>
+                            <p class="text-dark ms-4">{{stu.gender}}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-2">
+                                <i class="fas fa-phone text-primary me-2"></i>
+                                <strong>Số điện thoại:</strong>
+                            </p>
+                            <p class="text-dark ms-4">{{stu.phone}}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-2">
+                                <i class="fas fa-envelope text-primary me-2"></i>
+                                <strong>Email:</strong>
+                            </p>
+                            <p class="text-dark ms-4">{{stu.email}}</p>
+                        </div>
+                        <div class="col-12">
+                            <p class="mb-2">
+                                <i class="fas fa-map-marker-alt text-primary me-2"></i>
+                                <strong>Địa chỉ:</strong>
+                            </p>
+                            <p class="text-dark ms-4">{{stu.address}}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 {%endblock%}

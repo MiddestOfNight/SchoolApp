@@ -41,7 +41,7 @@ class User(Base):
     __tablename__ = "students"
     __table_args__ = {'extend_existing': True}
     name = Column(String(100))
-    avatar = Column(String(300), default="https://res.cloudinary.com/dy1unykph/image/upload/v1740037805/apple-iphone-16-pro-natural-titanium_lcnlu2.webp")
+    avatar = Column(String(300), default="https://i.pinimg.com/736x/f1/0f/f7/f10ff70a7155e5ab666bcdd1b45b726d.jpg")
     birthday = Column(Integer, nullable=False)
     gender = Column(String(10))
     address = Column(String(100))

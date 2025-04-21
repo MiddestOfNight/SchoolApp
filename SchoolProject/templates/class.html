@@ -1,17 +1,81 @@
 {%extends 'layout/base.html'%}
 
+{% block title %}Danh sách lớp - Khối {{ classes[0].grade.name if classes }}{% endblock %}
+
 {%block content%}
-<div class="row">
-    {%for p in classes%}
-    <div class="col-md-3 col-12" style="padding: 0.7rem">
-        <div class="card">
-            <div class="card-body">
-                <a href="/grade/{{grade_id}}/class/{{p.id}}">
-                    <h4 class="card-title">{{p.name}}</h4>
-                </a>
+<div class="container mt-4">
+    <div class="row g-4">
+        {% for c in classes %}
+        <div class="col-md-4">
+            <div class="card h-100 class-card border-0 rounded-4">
+                <div class="card-body pattern-bg d-flex flex-column">
+                    <h3 class="card-title text-white mb-3">Lớp {{ c.name }}</h3>
+                    <p class="card-text text-white mb-4">
+                        <i class="fas fa-user-graduate me-2"></i>
+                        {{ c.total_students }} học sinh
+                    </p>
+                    <a href="/grade/{{ grade_id }}/class/{{ c.id }}" class="btn btn-light mt-auto stretched-link">
+                        <i class="fas fa-chevron-right me-2"></i>
+                        Xem chi tiết lớp
+                    </a>
+                </div>
             </div>
         </div>
+        {% endfor %}
     </div>
-    {%endfor%}
 </div>
+
+<style>
+.class-card {
+    transition: all 0.3s ease;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.pattern-bg {
+    background: linear-gradient(45deg, #ff69b4, #ff1493);
+    position: relative;
+}
+
+.pattern-bg::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url('https://adobexdelements.com/wp-content/uploads/2020/12/adobe-xd-patterns-pack.jpg');
+    background-size: cover;
+    opacity: 0.2;
+    mix-blend-mode: soft-light;
+}
+
+.class-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 1rem 3rem rgba(0,0,0,.25)!important;
+}
+
+.class-card .card-body {
+    position: relative;
+    z-index: 1;
+    padding: 2rem;
+}
+
+.class-card .card-title {
+    font-weight: 600;
+    font-size: 1.75rem;
+}
+
+.class-card .btn-light {
+    border: none;
+    padding: 0.75rem 1.5rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.class-card .btn-light:hover {
+    transform: translateX(5px);
+    background: white;
+}
+</style>
 {%endblock%}
