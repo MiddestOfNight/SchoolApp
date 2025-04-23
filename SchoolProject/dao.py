@@ -1,7 +1,7 @@
 import hashlib
 import json
 from SchoolProject import db, app
-from SchoolProject.models import User, Grade, Admin, ScoreDetail, SchoolClass, UserEnum
+from SchoolProject.models import User, Grade, Admin, ScoreDetail, SchoolClass, UserEnum, Regulation
 from flask_login import current_user
 from sqlalchemy import func
 from datetime import datetime
@@ -13,15 +13,29 @@ def add_user(name, avatar, birthday_str, gender, address, phone, email, class_id
         today = datetime.today().date()
         age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
         
-        # Validate age
-        if age < 15 or age > 20:
-            raise ValueError("Tuổi học sinh phải từ 15 đến 20.")
+        # Get regulations
+        regulations = Regulation.query.first()
+        if not regulations:
+            regulations = Regulation()
+            db.session.add(regulations)
+            db.session.commit()
+        
+        # Validate age against regulations
+        if age < regulations.min_age:
+            raise ValueError(f"Tuổi học sinh phải từ {regulations.min_age} tuổi trở lên.")
+        if age > regulations.max_age:
+            raise ValueError(f"Tuổi học sinh không được quá {regulations.max_age} tuổi.")
+            
+        # Validate class size
+        current_class_size = User.query.filter_by(class_id=class_id).count()
+        if current_class_size >= regulations.max_students_per_class:
+            raise ValueError(f"Lớp đã đủ {regulations.max_students_per_class} học sinh. Không thể thêm nữa.")
             
         # Create new user
         u = User(
             name=name, 
             avatar=avatar if avatar else None,
-            birthday=age,
+            birthday=age,  # Store the age as an integer
             gender=gender,
             address=address,
             phone=phone,
@@ -38,12 +52,14 @@ def add_user(name, avatar, birthday_str, gender, address, phone, email, class_id
         return False, f"Lỗi: {str(e)}"
 
 def add_teacher(name, username, password, class_id=None, role=2):
-    try:
+    try:      
+        # Hash password
+        hashed_password = str(hashlib.md5(password.encode('utf-8')).hexdigest())
         
         # Create new admin/teacher
         user = Admin(name=name, 
                     username=username, 
-                    password=password,
+                    password=hashed_password,
                     role=role,
                     class_id=class_id)
         

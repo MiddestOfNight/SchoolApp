@@ -74,15 +74,13 @@ class ScoreType(RoleEnum):
 class ScoreDetail(Base):
     __tablename__ = 'score_details'
     __table_args__ = {'extend_existing': True}
-    id = Column(Integer, primary_key=True)
     student_id = Column(Integer, ForeignKey('students.id'), nullable=False)
     subject = Column(String(50), nullable=False)
     semester = Column(Integer, nullable=False)
     year = Column(String(10), nullable=False)
-    score_type = db.Column(db.String(10), nullable=False)
+    score_type = Column(String(10), nullable=False)
     attempt = Column(Integer)  # Thêm trường phân biệt lần nhập (1,2,3...)
     score_value = Column(Float, nullable=False)
-    created_date = Column(DateTime, default=datetime.now)
 
     student = relationship('User', backref="scores")
 
@@ -92,10 +90,9 @@ class ScoreDetail(Base):
             'value': self.score_value
         }
 
-class Regulation(db.Model):
+class Regulation(Base):
     __tablename__ = 'regulations'
     __table_args__ = {'extend_existing': True}
-    id = Column(Integer, primary_key=True, autoincrement=True)
     min_age = Column(Integer, default=15)
     max_age = Column(Integer, default=20)
     max_students_per_class = Column(Integer, default=40)
@@ -106,10 +103,8 @@ class Regulation(db.Model):
 class Subject(Base):
     __tablename__ = 'subjects'
     __table_args__ = {'extend_existing': True}
-    
     name = Column(String(50), nullable=False, unique=True)
-    is_active = Column(Boolean, default=True)
-    
+
     def __str__(self):
         return self.name
 

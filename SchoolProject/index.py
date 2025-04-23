@@ -129,6 +129,7 @@ def get_classes():
 def registerstudent():
     err_msg = None
     success_msg = None
+    form = FlaskForm()  # Create form instance for CSRF token
     
     # Get or create regulations at the start
     regulations = Regulation.query.first()
@@ -138,45 +139,52 @@ def registerstudent():
         db.session.commit()
 
     if request.method == "POST":
-        try:
-            name = request.form.get('name')
-            avatar = request.files.get('avatar')
-            path = None
-            if avatar:
-                res = cloudinary.uploader.upload(avatar)
-                path = res['secure_url']
-            birthday_str = request.form.get('birthday')
-            
-            # Calculate age and validate
-            age = calculate_age(birthday_str)
-            if age < regulations.min_age:
-                raise ValueError(f"Học sinh phải đủ {regulations.min_age} tuổi")
-            if age > regulations.max_age:
-                raise ValueError(f"Học sinh không được quá {regulations.max_age} tuổi")
-            
-            gender = request.form.get('gender')
-            address = request.form.get('address')
-            phone = request.form.get('phone')
-            email = request.form.get('email')
-            if '@' not in email:
-                raise ValueError("Email không hợp lệ. Vui lòng nhập địa chỉ có dấu @.")
-            class_id = request.form.get('class_id')
-            if not class_id:
-                raise ValueError("Vui lòng chọn lớp cho học sinh.")
+        if form.validate_on_submit():  # Check CSRF token
+            try:
+                name = request.form.get('name')
+                avatar = request.files.get('avatar')
+                path = None
+                if avatar:
+                    res = cloudinary.uploader.upload(avatar)
+                    path = res['secure_url']
+                birthday_str = request.form.get('birthday')
                 
-            # Check class size limit
-            current_count = dao.count_class(class_id)
-            if current_count >= regulations.max_students_per_class:
-                raise ValueError(f"Lớp đã đủ {regulations.max_students_per_class} học sinh. Không thể thêm nữa.")
-            
-            success, message = dao.add_user(name, path, birthday_str, gender, address, phone, email, class_id)
-            if success:
-                success_msg = message
-            else:
-                err_msg = message
+                # Validate required fields
+                if not all([name, birthday_str]):
+                    raise ValueError("Vui lòng điền đầy đủ họ tên và ngày sinh")
                 
-        except Exception as e:
-            err_msg = f"Lỗi: {str(e)}"
+                # Calculate age and validate
+                age = calculate_age(birthday_str)
+                if age < regulations.min_age:
+                    raise ValueError(f"Học sinh phải đủ {regulations.min_age} tuổi")
+                if age > regulations.max_age:
+                    raise ValueError(f"Học sinh không được quá {regulations.max_age} tuổi")
+                
+                gender = request.form.get('gender')
+                address = request.form.get('address')
+                phone = request.form.get('phone')
+                email = request.form.get('email')
+                if email and '@' not in email:
+                    raise ValueError("Email không hợp lệ. Vui lòng nhập địa chỉ có dấu @.")
+                class_id = request.form.get('class_id')
+                if not class_id:
+                    raise ValueError("Vui lòng chọn lớp cho học sinh.")
+                    
+                # Check class size limit
+                current_count = dao.count_class(class_id)
+                if current_count >= regulations.max_students_per_class:
+                    raise ValueError(f"Lớp đã đủ {regulations.max_students_per_class} học sinh. Không thể thêm nữa.")
+                
+                success, message = dao.add_user(name, path, birthday_str, gender, address, phone, email, class_id)
+                if success:
+                    success_msg = message
+                else:
+                    err_msg = message
+                    
+            except Exception as e:
+                err_msg = f"Lỗi: {str(e)}"
+        else:
+            err_msg = "CSRF token không hợp lệ hoặc đã hết hạn"
     
     grades = dao.load_grade()
     return render_template('register_student.html', 
@@ -184,6 +192,7 @@ def registerstudent():
                          success_msg=success_msg, 
                          grades=grades,
                          regulations=regulations,
+                         form=form,
                          now=datetime.now())
 
 @app.route("/registerteacher", methods=['GET', 'POST'])
@@ -214,19 +223,13 @@ def register_teacher():
                     raise Exception("Vui lòng chọn lớp cho giáo viên!")
             if Admin.query.filter_by(class_id=class_id).first():
                 raise Exception("Lớp này đã được phân cho một giáo viên khác!")
-
-                # Hash password
-                hashed_password = str(hashlib.md5(password.encode('utf-8')).hexdigest())
             
             # Create new admin/teacher
-            user = Admin(name=name, 
+            dao.add_teacher(name=name, 
                        username=username, 
-                       password=hashed_password,
+                       password=password,
                        role=role,
                        class_id=class_id)
-            
-            db.session.add(user)
-            db.session.commit()
             success_msg = "Thêm thành công!"
 
         except Exception as e:
@@ -527,10 +530,14 @@ def admin_subject_stats():
 @app.route('/admin/add-class', methods=['GET', 'POST'])
 @login_required
 def add_class():
+    if not current_user.is_admin:
+        return redirect('/')
+        
     err_msg = None
     success_msg = None
+    form = FlaskForm()
     
-    if request.method == 'POST':
+    if request.method == 'POST' and form.validate_on_submit():
         try:
             grade_id = request.form.get('grade_id')
             if not grade_id:
@@ -572,6 +579,8 @@ def add_class():
             
         except Exception as e:
             err_msg = str(e)
+    elif request.method == 'POST':
+        err_msg = "CSRF token không hợp lệ"
     
     # Get grades with their classes
     grades = Grade.query.all()
@@ -583,7 +592,8 @@ def add_class():
     return render_template('add_class.html', 
                          grades=grades,
                          err_msg=err_msg,
-                         success_msg=success_msg)
+                         success_msg=success_msg,
+                         form=form)
 
 @app.route('/admin/delete-class/<int:class_id>', methods=['POST'])
 @login_required
@@ -733,23 +743,29 @@ def manage_regulations():
     if request.method == 'POST':
         action = request.form.get('action')
         
-        if action == 'update_age_class':
-            min_age = int(request.form.get('min_age'))
-            max_age = int(request.form.get('max_age'))
-            max_students = int(request.form.get('max_students_per_class'))
-            
-            if min_age >= max_age:
-                raise ValueError("Tuổi tối thiểu phải nhỏ hơn tuổi tối đa")
+        if action == 'update_regulations':
+            try:
+                min_age = int(request.form.get('min_age'))
+                max_age = int(request.form.get('max_age'))
+                max_students = int(request.form.get('max_students_per_class'))
                 
-            if max_students < 1:
-                raise ValueError("Sĩ số tối đa phải lớn hơn 0")
+                if min_age >= max_age:
+                    raise ValueError("Tuổi tối thiểu phải nhỏ hơn tuổi tối đa")
+                    
+                if max_students < 1:
+                    raise ValueError("Sĩ số tối đa phải lớn hơn 0")
+                    
+                regulations.min_age = min_age
+                regulations.max_age = max_age
+                regulations.max_students_per_class = max_students
                 
-            regulations.min_age = min_age
-            regulations.max_age = max_age
-            regulations.max_students_per_class = max_students
-            
-            db.session.commit()
-            success_msg = "Cập nhật quy định thành công!"
+                db.session.commit()
+                success_msg = "Cập nhật quy định thành công!"
+            except ValueError as e:
+                err_msg = str(e)
+            except Exception as e:
+                err_msg = f"Lỗi: {str(e)}"
+                db.session.rollback()
             
         elif action == 'add_subject':
             subject_name = request.form.get('subject_name').strip()
@@ -899,8 +915,9 @@ def edit_student(student_id):
                     student.avatar = res['secure_url']
                     
                 birthday_str = request.form.get('birthday')
- 
                 age = calculate_age(birthday_str)
+                
+                # Validate age against regulations
                 if age < regulations.min_age:
                     raise ValueError(f"Học sinh phải đủ {regulations.min_age} tuổi")
                 if age > regulations.max_age:
@@ -914,22 +931,14 @@ def edit_student(student_id):
                 
                 # Validate input
                 if not all([name, birthday_str, gender, address, email]):
-                    raise Exception("Vui lòng điền đầy đủ thông tin bắt buộc!")
+                    raise ValueError("Vui lòng điền đầy đủ thông tin bắt buộc!")
                     
                 if '@' not in email:
-                    raise Exception("Email không hợp lệ!")
-                    
-                # Calculate age and validate
-                age = calculate_age(birthday_str)
-                regulations = Regulation.query.first()
-                if age < regulations.min_age:
-                    raise Exception(f"Học sinh phải đủ {regulations.min_age} tuổi")
-                if age > regulations.max_age:
-                    raise Exception(f"Học sinh không được quá {regulations.max_age} tuổi")
+                    raise ValueError("Email không hợp lệ!")
                     
                 # Update student info
                 student.name = name
-                student.birthday = age  # Use the datetime.date object
+                student.birthday = age
                 student.gender = gender
                 student.address = address
                 student.phone = phone
@@ -940,7 +949,7 @@ def edit_student(student_id):
                     # Check class size limit
                     current_count = dao.count_class(class_id)
                     if current_count >= regulations.max_students_per_class:
-                        raise Exception(f"Lớp đã đủ {regulations.max_students_per_class} học sinh!")
+                        raise ValueError(f"Lớp đã đủ {regulations.max_students_per_class} học sinh!")
                     student.class_id = class_id
                     
                 db.session.commit()

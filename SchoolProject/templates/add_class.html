@@ -18,6 +18,7 @@
             {% endif %}
             
             <form method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="mb-3">
                     <label for="grade" class="form-label">Khối:</label>
                     <select class="form-select" id="grade" name="grade_id" required>
@@ -84,7 +85,10 @@
 function deleteClass(classId, className) {
     if (confirm('Bạn có chắc chắn muốn xóa lớp ' + className + '?')) {
         fetch('/admin/delete-class/' + classId, {
-            method: 'POST'
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token() }}'
+            }
         })
         .then(response => response.json())
         .then(data => {
