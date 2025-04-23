@@ -1,5 +1,7 @@
 {% extends 'layout/base.html' %}
 
+{% block title %}Bảng điểm lớp {{ class_name }}{% endblock %}
+
 {% block content %}
 {% set current_year = 2024 %}
 {% set prev_year = current_year - 1 %}
@@ -28,6 +30,12 @@
                             <option value="2" {% if semester == 2 %}selected{% endif %}>2</option>
                         </select>
                     </div>
+                    <div class="col-md-3">
+                        <a href="{{ url_for('export_class_scores', class_id=request.view_args.class_id, semester=semester, year=year) }}" 
+                           class="btn btn-success">
+                            <i class="fas fa-file-excel"></i> Xuất Excel
+                        </a>
+                    </div>
                 </div>
             </form>
 
@@ -50,6 +58,7 @@
                             {% for subject in subjects %}
                             <th>{{ subject }}</th>
                             {% endfor %}
+                            <th>Điểm TB</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -66,6 +75,13 @@
                                 {% endif %}
                             </td>
                             {% endfor %}
+                            <td class="fw-bold text-center">
+                                {% if student.overall_average is not none %}
+                                    {{ "%.1f"|format(student.overall_average) }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
                         </tr>
                         {% endfor %}
                         
@@ -81,6 +97,13 @@
                                 {% endif %}
                             </td>
                             {% endfor %}
+                            <td class="text-center">
+                                {% if class_overall_average is not none %}
+                                    <strong>{{ "%.1f"|format(class_overall_average) }}</strong>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
                         </tr>
                     </tbody>
                 </table>

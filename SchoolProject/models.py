@@ -85,10 +85,29 @@ class ScoreDetail(Base):
     student = relationship('User', backref="scores")
 
     def to_dict(self):
+        from SchoolProject.dao import calculate_average_score
+        avg = calculate_average_score(
+            self.student_id,
+            self.subject,
+            self.semester,
+            self.year
+        )
         return {
             'type': self.score_type,
-            'value': self.score_value
+            'value': self.score_value,
+            'average': avg
         }
+
+    @property
+    def average_score(self):
+        """Get the average score for this student in this subject/semester/year"""
+        from SchoolProject.dao import calculate_average_score
+        return calculate_average_score(
+            self.student_id,
+            self.subject,
+            self.semester,
+            self.year
+        )
 
 class Regulation(Base):
     __tablename__ = 'regulations'

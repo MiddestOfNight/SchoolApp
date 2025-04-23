@@ -1,16 +1,20 @@
 import hashlib
 import math
 
-from flask import render_template, request, redirect, session, jsonify, flash, url_for
+from flask import render_template, request, redirect, session, jsonify, flash, url_for, send_file
 from flask_login import login_user, current_user, logout_user, login_required
 import cloudinary.uploader
 from sqlalchemy import text
 from flask_wtf import FlaskForm
+import openpyxl
+from openpyxl.styles import Font, Alignment, PatternFill
+from openpyxl.utils import get_column_letter
+import os
+from datetime import datetime
 
 from SchoolProject import app, login, db
 from SchoolProject.models import Admin, UserEnum, User, Grade, SchoolClass, Regulation, Subject, ScoreDetail
 import dao
-from datetime import datetime
 
 @app.context_processor
 def utility_processor():
@@ -217,27 +221,39 @@ def register_teacher():
             if Admin.query.filter_by(username=username).first():
                 raise Exception("Tên đăng nhập đã tồn tại!")
 
-            # Check class for teacher
+            # Check class for teacher only
             if role == 2:  # TEACHER
                 if not class_id:
                     raise Exception("Vui lòng chọn lớp cho giáo viên!")
-            if Admin.query.filter_by(class_id=class_id).first():
-                raise Exception("Lớp này đã được phân cho một giáo viên khác!")
+                # Only check for duplicate class_id for teachers
+                if Admin.query.filter_by(class_id=class_id, role=UserEnum.TEACHER.value).first():
+                    raise Exception("Lớp này đã được phân cho một giáo viên khác!")
             
             # Create new admin/teacher
-            dao.add_teacher(name=name, 
-                       username=username, 
-                       password=password,
-                       role=role,
-                       class_id=class_id)
-            success_msg = "Thêm thành công!"
+            success, message = dao.add_teacher(
+                name=name, 
+                username=username, 
+                password=password,
+                role=role,
+                class_id=class_id
+            )
+            
+            if success:
+                success_msg = message
+            else:
+                err_msg = message
 
         except Exception as e:
             err_msg = str(e)
             db.session.rollback()
 
     classes = dao.load_class()
-    used_class_ids = [c.class_id for c in Admin.query.filter(Admin.class_id.isnot(None)).all()]
+    # Get classes that already have teachers
+    used_class_ids = [c.class_id for c in Admin.query.filter(
+        Admin.class_id.isnot(None),
+        Admin.role == UserEnum.TEACHER.value
+    ).all()]
+    
     return render_template("register_admin.html", 
                          classes=classes, 
                          used_class_ids=used_class_ids,
@@ -292,7 +308,7 @@ def input_score_single(student_id):
         return redirect('/teacher/class-list')
 
     # Lấy danh sách môn học đang active
-    active_subjects = Subject.query.filter_by(is_active=True).order_by(Subject.name).all()
+    active_subjects = Subject.query.filter_by(active=True).order_by(Subject.name).all()
     if not active_subjects:
         flash('Chưa có môn học nào được kích hoạt', 'error')
         return redirect('/teacher/class-list')
@@ -323,7 +339,7 @@ def input_score_single(student_id):
     try:
         # Kiểm tra môn học có hợp lệ
         subject = request.form.get('subject')
-        if not Subject.query.filter_by(name=subject, is_active=True).first():
+        if not Subject.query.filter_by(name=subject, active=True).first():
             raise Exception('Môn học không hợp lệ hoặc đã bị vô hiệu hóa')
 
         # Cập nhật form_data với dữ liệu từ form
@@ -417,7 +433,7 @@ def class_scores(class_id):
         return redirect('/')
         
     # Get active subjects
-    subjects = Subject.query.filter_by(is_active=True).order_by(Subject.name).all()
+    subjects = Subject.query.filter_by(active=True).order_by(Subject.name).all()
     if not subject and subjects:
         subject = subjects[0].name
     
@@ -452,18 +468,34 @@ def class_all_scores(class_id):
     students = dao.load_student(class_id=class_id)
     
     # Get active subjects
-    subjects = Subject.query.filter_by(is_active=True).order_by(Subject.name).all()
+    subjects = Subject.query.filter_by(active=True).order_by(Subject.name).all()
     subject_names = [s.name for s in subjects]
     
     # Calculate averages for each student and subject
+    class_total_average = 0
+    valid_student_count = 0
+    
     for student in students:
         student.averages = {}
+        total_score = 0
+        valid_subjects = 0
+        
         for subject in subject_names:
             avg = dao.calculate_average_score(student.id, subject, semester, year)
             if avg is not None:
                 student.averages[subject] = {'average': avg}
+                total_score += avg
+                valid_subjects += 1
+        
+        # Calculate overall average for student
+        if valid_subjects > 0:
+            student.overall_average = round(total_score / valid_subjects, 1)
+            class_total_average += student.overall_average
+            valid_student_count += 1
+        else:
+            student.overall_average = None
     
-    # Calculate class averages for each subject
+    # Calculate class averages for each subject and overall
     class_averages = {}
     for subject in subject_names:
         subject_scores = [s.averages.get(subject, {}).get('average') 
@@ -472,13 +504,17 @@ def class_all_scores(class_id):
         if subject_scores:
             class_averages[subject] = sum(subject_scores) / len(subject_scores)
     
+    # Calculate class overall average
+    class_overall_average = round(class_total_average / valid_student_count, 1) if valid_student_count > 0 else None
+    
     return render_template('class_all_scores.html',
                          class_name=clazz.name,
                          semester=semester,
                          year=year,
                          students=students,
                          subjects=subject_names,
-                         class_averages=class_averages)
+                         class_averages=class_averages,
+                         class_overall_average=class_overall_average)
 
 @app.route('/admin/subject-stats')
 @login_required
@@ -776,7 +812,7 @@ def manage_regulations():
             if Subject.query.filter_by(name=subject_name).first():
                 raise ValueError("Môn học này đã tồn tại")
                 
-            subject = Subject(name=subject_name)
+            subject = Subject(name=subject_name, is_active=True)
             db.session.add(subject)
             db.session.commit()
             success_msg = f"Đã thêm môn học {subject_name}"
@@ -977,6 +1013,153 @@ def edit_student(student_id):
                          err_msg=err_msg,
                          success_msg=success_msg,
                          form=form)
+
+@app.route('/class/<int:class_id>/export-scores')
+@login_required
+def export_class_scores(class_id):
+    # Get parameters
+    semester = request.args.get('semester', 1, type=int)
+    year = request.args.get('year', '2024-2025')
+    
+    # Get class info
+    clazz = dao.get_class_by_id(class_id)
+    if not clazz:
+        return redirect('/')
+    
+    # Get all students in the class
+    students = dao.load_student(class_id=class_id)
+    
+    # Get active subjects
+    subjects = Subject.query.filter_by(active=True).order_by(Subject.name).all()
+    subject_names = [s.name for s in subjects]
+    
+    # Calculate averages for each student and subject
+    class_total_average = 0
+    valid_student_count = 0
+    
+    for student in students:
+        student.averages = {}
+        total_score = 0
+        valid_subjects = 0
+        
+        for subject in subject_names:
+            avg = dao.calculate_average_score(student.id, subject, semester, year)
+            if avg is not None:
+                student.averages[subject] = {'average': avg}
+                total_score += avg
+                valid_subjects += 1
+        
+        # Calculate overall average for student
+        if valid_subjects > 0:
+            student.overall_average = round(total_score / valid_subjects, 1)
+            class_total_average += student.overall_average
+            valid_student_count += 1
+        else:
+            student.overall_average = None
+    
+    # Calculate class averages for each subject
+    class_averages = {}
+    for subject in subject_names:
+        subject_scores = [s.averages.get(subject, {}).get('average') 
+                         for s in students 
+                         if s.averages.get(subject, {}).get('average') is not None]
+        if subject_scores:
+            class_averages[subject] = sum(subject_scores) / len(subject_scores)
+    
+    # Calculate class overall average
+    class_overall_average = round(class_total_average / valid_student_count, 1) if valid_student_count > 0 else None
+
+    # Create Excel workbook
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = f"Điểm TB Lớp {clazz.name}"
+
+    # Styles
+    header_font = Font(bold=True)
+    header_fill = PatternFill(start_color="CCE5FF", end_color="CCE5FF", fill_type="solid")
+    center_alignment = Alignment(horizontal='center')
+
+    # Write headers
+    ws['A1'] = "BẢNG ĐIỂM TRUNG BÌNH LỚP"
+    ws.merge_cells('A1:' + get_column_letter(len(subject_names) + 3) + '1')
+    ws['A1'].alignment = center_alignment
+    ws['A1'].font = Font(bold=True, size=14)
+
+    # Write class info
+    ws['A2'] = f"Lớp: {clazz.name}"
+    ws['A3'] = f"Học kỳ: {semester}"
+    ws['B3'] = f"Năm học: {year}"
+
+    # Column headers
+    headers = ['STT', 'Họ và tên'] + subject_names + ['Điểm TB']
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=4, column=col)
+        cell.value = header
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = center_alignment
+        ws.column_dimensions[get_column_letter(col)].width = 15
+
+    # Write student data
+    for row, student in enumerate(students, 5):
+        ws.cell(row=row, column=1, value=row-4).alignment = center_alignment
+        ws.cell(row=row, column=2, value=student.name)
+        
+        for col, subject in enumerate(subject_names, 3):
+            avg = student.averages.get(subject, {}).get('average')
+            if avg is not None:
+                cell = ws.cell(row=row, column=col, value=round(avg, 1))
+                cell.alignment = center_alignment
+            else:
+                ws.cell(row=row, column=col, value="-").alignment = center_alignment
+        
+        # Write overall average
+        last_col = len(subject_names) + 3
+        if student.overall_average is not None:
+            cell = ws.cell(row=row, column=last_col, value=student.overall_average)
+            cell.alignment = center_alignment
+            cell.font = Font(bold=True)
+        else:
+            ws.cell(row=row, column=last_col, value="-").alignment = center_alignment
+
+    # Write class averages
+    last_row = len(students) + 5
+    ws.cell(row=last_row, column=1, value="").alignment = center_alignment
+    ws.cell(row=last_row, column=2, value="Trung bình lớp").font = header_font
+    
+    for col, subject in enumerate(subject_names, 3):
+        avg = class_averages.get(subject)
+        if avg is not None:
+            cell = ws.cell(row=last_row, column=col, value=round(avg, 1))
+            cell.alignment = center_alignment
+            cell.font = header_font
+        else:
+            ws.cell(row=last_row, column=col, value="-").alignment = center_alignment
+    
+    # Write class overall average
+    last_col = len(subject_names) + 3
+    if class_overall_average is not None:
+        cell = ws.cell(row=last_row, column=last_col, value=class_overall_average)
+        cell.alignment = center_alignment
+        cell.font = header_font
+    else:
+        ws.cell(row=last_row, column=last_col, value="-").alignment = center_alignment
+
+    # Save file
+    filename = f"diem_tb_lop_{clazz.name}_{semester}_{year}.xlsx"
+    filepath = os.path.join(app.root_path, 'static', 'exports', filename)
+    
+    # Create exports directory if it doesn't exist
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    
+    wb.save(filepath)
+    
+    return send_file(
+        filepath,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=filename
+    )
 
 if __name__ == "__main__":
     with app.app_context():
