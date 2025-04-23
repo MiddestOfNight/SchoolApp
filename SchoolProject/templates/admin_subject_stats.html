@@ -12,9 +12,11 @@
                     <div class="col-md-3">
                         <label class="form-label">Môn:</label>
                         <select name="subject" class="form-select">
-                            <option value="Toán" {% if subject == 'Toán' %}selected{% endif %}>Toán</option>
-                            <option value="Văn" {% if subject == 'Văn' %}selected{% endif %}>Văn</option>
-                            <option value="Anh" {% if subject == 'Anh' %}selected{% endif %}>Anh</option>
+                            {% for s in subjects %}
+                            <option value="{{ s.name }}" {% if s.name == subject %}selected{% endif %}>
+                                {{ s.name }}
+                            </option>
+                            {% endfor %}
                         </select>
                     </div>
                     <div class="col-md-3">

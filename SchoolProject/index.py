@@ -525,7 +525,17 @@ def admin_subject_stats():
     current_year_str = f"{current_year}-{current_year + 1}"
     prev_year_str = f"{prev_year}-{current_year}"
     
-    subject = request.args.get('subject', 'Toán')
+    # Get active subjects
+    subjects = Subject.query.filter_by(active=True).order_by(Subject.name).all()
+    if not subjects:
+        flash('Chưa có môn học nào được kích hoạt', 'warning')
+        return redirect(url_for('manage_regulations'))
+    
+    # Get selected subject (default to first active subject)
+    subject = request.args.get('subject')
+    if not subject and subjects:
+        subject = subjects[0].name
+    
     semester = int(request.args.get('semester', '1'))
     year = request.args.get('year', current_year_str)
     
@@ -556,6 +566,7 @@ def admin_subject_stats():
         })
     
     return render_template('admin_subject_stats.html',
+                         subjects=subjects,
                          subject=subject,
                          semester=semester,
                          year=year,
@@ -812,7 +823,7 @@ def manage_regulations():
             if Subject.query.filter_by(name=subject_name).first():
                 raise ValueError("Môn học này đã tồn tại")
                 
-            subject = Subject(name=subject_name, is_active=True)
+            subject = Subject(name=subject_name)
             db.session.add(subject)
             db.session.commit()
             success_msg = f"Đã thêm môn học {subject_name}"
