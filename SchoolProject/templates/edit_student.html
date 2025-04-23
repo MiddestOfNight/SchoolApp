@@ -28,6 +28,7 @@
                     {% endif %}
 
                     <form method="post" enctype="multipart/form-data">
+                        {{ form.csrf_token }}
                         <div class="row g-3">
                             <!-- Avatar -->
                             <div class="col-12 text-center mb-3">

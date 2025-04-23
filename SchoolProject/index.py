@@ -50,6 +50,16 @@ def index():
     elif tab == 'search':
         if q:
             students = dao.load_student(q=q)
+            # Add class name for each student
+            for student in students:
+                if student.class_id:
+                    class_info = dao.get_class_by_id(student.class_id)
+                    if class_info:
+                        student.class_name = class_info.name
+                    else:
+                        student.class_name = "Chưa phân lớp"
+                else:
+                    student.class_name = "Chưa phân lớp"
             
     return render_template("index.html", 
                          grades=grades,
@@ -867,70 +877,97 @@ def edit_student(student_id):
     if not student:
         flash('Không tìm thấy học sinh', 'error')
         return redirect('/')
+    
+    # Get or create regulations at the start
+    regulations = Regulation.query.first()
+    if not regulations:
+        regulations = Regulation()
+        db.session.add(regulations)
+        db.session.commit()
         
     err_msg = None
     success_msg = None
+    form = FlaskForm()
     
     if request.method == 'POST':
-        try:
-            name = request.form.get('name')
-            avatar = request.files.get('avatar')
-            if avatar:
-                res = cloudinary.uploader.upload(avatar)
-                student.avatar = res['secure_url']
+        if form.validate_on_submit():
+            try:
+                name = request.form.get('name')
+                avatar = request.files.get('avatar')
+                if avatar:
+                    res = cloudinary.uploader.upload(avatar)
+                    student.avatar = res['secure_url']
+                    
+                birthday_str = request.form.get('birthday')
+ 
+                age = calculate_age(birthday_str)
+                if age < regulations.min_age:
+                    raise ValueError(f"Học sinh phải đủ {regulations.min_age} tuổi")
+                if age > regulations.max_age:
+                    raise ValueError(f"Học sinh không được quá {regulations.max_age} tuổi")
+                    
+                gender = request.form.get('gender')
+                address = request.form.get('address')
+                phone = request.form.get('phone')
+                email = request.form.get('email')
+                class_id = request.form.get('class_id')
                 
-            birthday = request.form.get('birthday')
-            gender = request.form.get('gender')
-            address = request.form.get('address')
-            phone = request.form.get('phone')
-            email = request.form.get('email')
-            class_id = request.form.get('class_id')
+                # Validate input
+                if not all([name, birthday_str, gender, address, email]):
+                    raise Exception("Vui lòng điền đầy đủ thông tin bắt buộc!")
+                    
+                if '@' not in email:
+                    raise Exception("Email không hợp lệ!")
+                    
+                # Calculate age and validate
+                age = calculate_age(birthday_str)
+                regulations = Regulation.query.first()
+                if age < regulations.min_age:
+                    raise Exception(f"Học sinh phải đủ {regulations.min_age} tuổi")
+                if age > regulations.max_age:
+                    raise Exception(f"Học sinh không được quá {regulations.max_age} tuổi")
+                    
+                # Update student info
+                student.name = name
+                student.birthday = age  # Use the datetime.date object
+                student.gender = gender
+                student.address = address
+                student.phone = phone
+                student.email = email
+                
+                # Update class if changed
+                if class_id and int(class_id) != student.class_id:
+                    # Check class size limit
+                    current_count = dao.count_class(class_id)
+                    if current_count >= regulations.max_students_per_class:
+                        raise Exception(f"Lớp đã đủ {regulations.max_students_per_class} học sinh!")
+                    student.class_id = class_id
+                    
+                db.session.commit()
+                success_msg = "Cập nhật thông tin học sinh thành công!"
+                
+            except Exception as e:
+                err_msg = str(e)
+                db.session.rollback()
+        else:
+            err_msg = "CSRF token không hợp lệ"
             
-            # Validate input
-            if not all([name, birthday, gender, address, email]):
-                raise Exception("Vui lòng điền đầy đủ thông tin bắt buộc!")
-                
-            if '@' not in email:
-                raise Exception("Email không hợp lệ!")
-                
-            # Calculate age and validate
-            age = calculate_age(birthday)
-            regulations = Regulation.query.first()
-            if age < regulations.min_age:
-                raise Exception(f"Học sinh phải đủ {regulations.min_age} tuổi")
-            if age > regulations.max_age:
-                raise Exception(f"Học sinh không được quá {regulations.max_age} tuổi")
-                
-            # Update student info
-            student.name = name
-            student.birthday = birthday
-            student.gender = gender
-            student.address = address
-            student.phone = phone
-            student.email = email
-            
-            # Update class if changed
-            if class_id and int(class_id) != student.class_id:
-                # Check class size limit
-                current_count = dao.count_class(class_id)
-                if current_count >= regulations.max_students_per_class:
-                    raise Exception(f"Lớp đã đủ {regulations.max_students_per_class} học sinh!")
-                student.class_id = class_id
-                
-            db.session.commit()
-            success_msg = "Cập nhật thông tin học sinh thành công!"
-            
-        except Exception as e:
-            err_msg = str(e)
-            db.session.rollback()
+    # Format birthday for the form
+    if student.birthday:
+        if isinstance(student.birthday, str):
+            try:
+                student.birthday = datetime.strptime(student.birthday, '%Y-%m-%d').date()
+            except ValueError:
+                pass
             
     # Get all grades and classes for the form
     grades = dao.load_grade()
-    return render_template('edit_student.html',
+    return render_template('edit_student.html', regulations=regulations,
                          student=student,
                          grades=grades,
                          err_msg=err_msg,
-                         success_msg=success_msg)
+                         success_msg=success_msg,
+                         form=form)
 
 if __name__ == "__main__":
     with app.app_context():
